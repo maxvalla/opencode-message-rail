@@ -1,4 +1,5 @@
 {
+  "ignore": ["**/*.test.ts", "**/*.d.ts"],
   "presets": [
     ["@babel/preset-typescript"],
     ["babel-preset-solid", { "generate": "universal", "moduleName": "@opentui/solid" }]

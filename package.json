@@ -13,7 +13,8 @@
   "scripts": {
     "build": "babel src --out-dir dist --extensions .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "test": "BUN_BE_BUN=1 opencode test src/geom.test.ts",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
     "@opencode-ai/plugin": "0.0.0-beta-19271"
