@@ -10,7 +10,7 @@
  */
 
 import { createMemo, createSignal } from "solid-js";
-import type { Context, Route } from "@opencode-ai/plugin/tui/context";
+import type { Context, Route } from "@opencode/plugin/tui/context";
 import type { MouseEvent, Renderable } from "@opentui/core";
 import { attachedCheck, findTranscript, measure, type Measure, type TextScroller } from "./probe";
 import {

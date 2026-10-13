@@ -4,7 +4,7 @@
   "description": "OpenCode 2 TUI plugin: a right-edge message anchor rail with per-turn ticks, chevrons, a dwell-hover preview card and click-to-jump.",
   "license": "MIT",
   "type": "module",
-  "engines": { "opencode": ">=2.0.19" },
+  "engines": { "opencode": ">=2.0.27" },
   "exports": {
     ".": "./dist/index.js",
     "./tui": "./dist/tui.js"
@@ -17,20 +17,19 @@
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "0.0.0-beta-19271"
+    "@opencode/plugin": "2.0.27"
   },
   "peerDependencies": {
-    "@opentui/core": ">=0.5.11",
-    "@opentui/solid": ">=0.5.11",
+    "@opentui/core": ">=0.5.17",
+    "@opentui/solid": ">=0.5.17",
     "solid-js": ">=1.9.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.29.7",
     "@babel/core": "^7.29.7",
     "@babel/preset-typescript": "^7.27.1",
-    "@opencode-ai/client": "0.0.0-beta-19271",
-    "@opentui/core": "0.5.11",
-    "@opentui/solid": "0.5.11",
+    "@opentui/core": "0.5.17",
+    "@opentui/solid": "0.5.17",
     "@types/node": "^26.0.1",
     "babel-preset-solid": "1.9.12",
     "solid-js": "1.9.12",

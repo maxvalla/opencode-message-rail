@@ -7,7 +7,7 @@
  * render prop.
  */
 
-import type { Context } from "@opencode-ai/plugin/tui/context";
+import type { Context } from "@opencode/plugin/tui/context";
 
 export interface RailColors {
   rail: string;
@@ -18,7 +18,7 @@ export interface RailColors {
 }
 
 /**
- * `ResolvedTheme` is imported by context.d.ts from "@opencode-ai/theme/tui", which is not
+ * `ResolvedTheme` is imported by context.d.ts from "@opencode/theme/tui", which is not
  * installed in the reference plugin's tree, so the leaf shape is not readable as a type here.
  * Read defensively down the known key paths with fixed fallbacks (everforest darkStep family,
  * the same values the reference plugin hard-codes for the same reason).

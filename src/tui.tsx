@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
-import { Plugin } from "@opencode-ai/plugin/tui";
-import type { Context } from "@opencode-ai/plugin/tui/context";
+import { Plugin } from "@opencode/plugin/tui";
+import type { Context } from "@opencode/plugin/tui/context";
 import type { JSX } from "@opentui/solid";
 import { createRoot } from "solid-js";
 import { writeFileSync } from "node:fs";
@@ -414,5 +414,5 @@ function RailKeymap(props: { ctl: RailController; onToggle: () => void }) {
     bindings: ["message-rail.toggle", "message-rail.prev", "message-rail.next"],
   }));
 
-  return [] as unknown as JSX.Element;
+  return null;
 }

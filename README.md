@@ -2,7 +2,7 @@
 
 OpenCode 2 TUI plugin: a right-edge message anchor rail with per-turn ticks, chevrons, a dwell-hover preview card and click-to-jump.
 
-Requires OpenCode **≥ 2.0.19**.
+Requires OpenCode **≥ 2.0.27**.
 
 ## Install (local file plugin)
 

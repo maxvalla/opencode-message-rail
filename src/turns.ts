@@ -11,7 +11,7 @@
  * yields `[]` / `null`, never a propagating error into the reactive tree.
  */
 
-import type { Context } from "@opencode-ai/plugin/tui/context";
+import type { Context } from "@opencode/plugin/tui/context";
 import type { Turn } from "./geom";
 
 export interface RawMsg {
