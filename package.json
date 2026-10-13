@@ -16,9 +16,7 @@
     "test": "BUN_BE_BUN=1 opencode test src/geom.test.ts",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
-  "dependencies": {
-    "@opencode/plugin": "2.0.27"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "@opentui/core": ">=0.5.17",
     "@opentui/solid": ">=0.5.17",
@@ -28,6 +26,7 @@
     "@babel/cli": "^7.29.7",
     "@babel/core": "^7.29.7",
     "@babel/preset-typescript": "^7.27.1",
+    "@opencode/plugin": "2.0.27",
     "@opentui/core": "0.5.17",
     "@opentui/solid": "0.5.17",
     "@types/node": "^26.0.1",

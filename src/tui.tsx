@@ -1,5 +1,4 @@
 /** @jsxImportSource @opentui/solid */
-import { Plugin } from "@opencode/plugin/tui";
 import type { Context } from "@opencode/plugin/tui/context";
 import type { JSX } from "@opentui/solid";
 import { createRoot } from "solid-js";
@@ -9,7 +8,7 @@ import { createRail, type RailController } from "./controller";
 import { hitAt } from "./geom";
 import { toneColor } from "./theme";
 
-export default Plugin.define({
+export default {
   id: "opencode-message-rail",
 
   setup(context: Context) {
@@ -28,7 +27,7 @@ export default Plugin.define({
       }
     };
   },
-});
+};
 
 /**
  * The real plugin half: options → settings, the controller, the `app` slot claim
