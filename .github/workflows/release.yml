@@ -1,11 +1,14 @@
 name: Release
 
-# Tag-driven publish with npm provenance. Requires an NPM_TOKEN repository secret
-# (an automation token with publish rights on the package). Provenance needs the
-# `id-token: write` permission and a public repository.
+# Publishes on a version tag, and by hand from the Actions tab. Tag pushes run
+# only once the repository variable NPM_PUBLISH_ENABLED is set to "true", so a
+# tag does not turn red before the registry side exists. Requires an NPM_TOKEN
+# secret (an automation token with publish rights) and a public repository for
+# provenance.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,6 +16,7 @@ permissions:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || vars.NPM_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
