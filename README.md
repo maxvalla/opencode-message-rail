@@ -11,7 +11,23 @@ Requires OpenCode **≥ 2.3.2** (TUI plugin API 2.3.2) and OpenTUI **≥ 0.8.4**
 
 ## Install
 
-The package is not on npm yet, so install from source:
+```bash
+opencode plugin opencode-message-rail -g    # global config (~/.config/opencode)
+opencode plugin opencode-message-rail       # this project only
+```
+
+`-g` writes the global OpenCode config, which is what most people want. Without it the plugin
+is enabled for the current directory only. Restart the TUI afterwards.
+
+Or add it by hand to `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "plugins": ["opencode-message-rail"]
+}
+```
+
+From a checkout instead of the registry:
 
 ```bash
 git clone https://github.com/maxvalla/opencode-message-rail.git
@@ -19,23 +35,9 @@ cd opencode-message-rail
 npm install                                   # installs deps and builds dist/
 ```
 
-Then add the checkout to `~/.config/opencode/opencode.json` and restart the TUI:
-
-```json
-{
-  "plugins": ["file:/abs/path/to/opencode-message-rail"]
-}
-```
-
-Use the `file:` form for a directory — a bare path does not load the TUI half, and the
-`npm install` step is required: the repository ships sources, and `prepare` builds `dist/`.
-
-Once the package is published to npm this becomes:
-
-```bash
-opencode plugin opencode-message-rail -g    # global config (~/.config/opencode)
-opencode plugin opencode-message-rail       # this project only
-```
+then use `"file:/abs/path/to/opencode-message-rail"` in the same `plugins` array. The `file:`
+form is required for a directory, and `npm install` is not optional: the repository ships
+sources, and `prepare` builds `dist/`.
 
 `opencode plugin github:maxvalla/opencode-message-rail` does **not** work on OpenCode 2.3.2:
 the installer blocks the package's `prepare` script, so no `dist/` is produced.
