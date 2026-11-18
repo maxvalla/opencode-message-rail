@@ -1,5 +1,7 @@
 # opencode-message-rail
 
+English | [简体中文](README.zh.md)
+
 A right-edge message rail for the [OpenCode](https://opencode.ai) TUI: one tick per user
 turn, chevrons for previous/next, a dwell-hover preview card, and click-to-jump.
 

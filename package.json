@@ -33,7 +33,8 @@
   },
   "files": [
     "dist",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "README.zh.md"
   ],
   "publishConfig": {
     "access": "public"
