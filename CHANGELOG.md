@@ -39,10 +39,9 @@ migrated architecturally.
   coalescing.
 - CI on Linux and macOS; `CHANGELOG`, `CONTRIBUTING`, `SECURITY`, issue template.
 
-## [0.1.0] — 2026-10
+## 0.1.0 — 2026-10
 
 Initial implementation: per-turn ticks, chevrons, dwell-hover preview card, click-to-jump,
 capability tiers 0–3, the four-rung jump ladder, a durable `Alt+R` toggle, and a debug channel.
 
 [0.2.0]: https://github.com/maxvalla/opencode-message-rail/releases/tag/v0.2.0
-[0.1.0]: https://github.com/maxvalla/opencode-message-rail/releases/tag/v0.1.0
