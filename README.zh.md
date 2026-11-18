@@ -15,25 +15,27 @@ opencode plugin opencode-message-rail -g    # 写入全局配置（~/.config/ope
 opencode plugin opencode-message-rail       # 仅当前项目
 ```
 
-`-g` 写全局配置，多数人需要的是这个；不带 `-g` 只对当前目录生效。装完重启 TUI。
-
-或者手动写进 `~/.config/opencode/opencode.json`：
+这条命令会把包装进 OpenCode 的插件缓存，并写进 TUI 配置——`-g` 写
+`~/.config/opencode/tui.json`，否则写项目内的 `.opencode/tui.json`：
 
 ```json
 {
-  "plugins": ["opencode-message-rail"]
+  "plugin": ["opencode-message-rail"]
 }
 ```
 
-如果不想走 registry，从源码装：
+装完重启 TUI。
+
+如果从源码装：
 
 ```bash
 git clone https://github.com/maxvalla/opencode-message-rail.git
 cd opencode-message-rail
-npm install                                   # 安装依赖并构建 dist/
+npm install                        # 安装依赖并构建 dist/
+opencode plugin "$PWD" -g          # 注册这个目录
 ```
 
-然后在同一个 `plugins` 数组里写 `"file:/绝对路径/opencode-message-rail"`。目录**必须**用 `file:` 形式，`npm install` 也不能省：仓库里是源码，`dist/` 由 `prepare` 构建。
+`npm install` 不能省：仓库里是源码，`dist/` 由 `prepare` 构建。
 
 `opencode plugin github:maxvalla/opencode-message-rail` 在 OpenCode 2.3.2 上**不可用**：安装器会拦截包里的 `prepare` 脚本，不会生成 `dist/`。
 

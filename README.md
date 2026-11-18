@@ -16,28 +16,27 @@ opencode plugin opencode-message-rail -g    # global config (~/.config/opencode)
 opencode plugin opencode-message-rail       # this project only
 ```
 
-`-g` writes the global OpenCode config, which is what most people want. Without it the plugin
-is enabled for the current directory only. Restart the TUI afterwards.
-
-Or add it by hand to `~/.config/opencode/opencode.json`:
+The command installs the package into OpenCode's plugin cache and registers it in the TUI
+config — `~/.config/opencode/tui.json` for `-g`, `.opencode/tui.json` otherwise:
 
 ```json
 {
-  "plugins": ["opencode-message-rail"]
+  "plugin": ["opencode-message-rail"]
 }
 ```
+
+Restart the TUI afterwards.
 
 From a checkout instead of the registry:
 
 ```bash
 git clone https://github.com/maxvalla/opencode-message-rail.git
 cd opencode-message-rail
-npm install                                   # installs deps and builds dist/
+npm install                        # installs deps and builds dist/
+opencode plugin "$PWD" -g          # registers the directory
 ```
 
-then use `"file:/abs/path/to/opencode-message-rail"` in the same `plugins` array. The `file:`
-form is required for a directory, and `npm install` is not optional: the repository ships
-sources, and `prepare` builds `dist/`.
+`npm install` is not optional: the repository ships sources, and `prepare` builds `dist/`.
 
 `opencode plugin github:maxvalla/opencode-message-rail` does **not** work on OpenCode 2.3.2:
 the installer blocks the package's `prepare` script, so no `dist/` is produced.
