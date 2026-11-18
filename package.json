@@ -1,34 +1,38 @@
 {
   "name": "opencode-message-rail",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OpenCode 2 TUI plugin: a right-edge message anchor rail with per-turn ticks, chevrons, a dwell-hover preview card and click-to-jump.",
   "license": "MIT",
   "type": "module",
-  "engines": { "opencode": ">=2.0.27" },
+  "engines": {
+    "opencode": ">=2.3.2"
+  },
   "exports": {
     ".": "./dist/index.js",
     "./tui": "./dist/tui.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "babel src --out-dir dist --extensions .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "test": "BUN_BE_BUN=1 opencode test src/geom.test.ts",
+    "test": "BUN_BE_BUN=1 opencode test --conditions=browser src/geom.test.ts src/controller.test.ts",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {},
   "peerDependencies": {
-    "@opentui/core": ">=0.5.17",
-    "@opentui/solid": ">=0.5.17",
+    "@opentui/core": ">=0.8.4",
+    "@opentui/solid": ">=0.8.4",
     "solid-js": ">=1.9.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.29.7",
     "@babel/core": "^7.29.7",
     "@babel/preset-typescript": "^7.27.1",
-    "@opencode/plugin": "2.0.27",
-    "@opentui/core": "0.5.17",
-    "@opentui/solid": "0.5.17",
+    "@opencode/plugin": "2.3.2",
+    "@opentui/core": "0.8.4",
+    "@opentui/solid": "0.8.4",
     "@types/node": "^26.0.1",
     "babel-preset-solid": "1.9.12",
     "solid-js": "1.9.12",
