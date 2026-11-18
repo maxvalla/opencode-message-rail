@@ -1,0 +1,67 @@
+name: Bug report
+description: Something about the rail, its ticks, the hover card or jumping is wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The two most useful fields are `tier` and `pointerSource`
+        from the plugin's debug snapshot — they narrow the problem down to one layer.
+
+  - type: input
+    id: opencode
+    attributes:
+      label: OpenCode version
+      description: Output of `opencode --version`
+      placeholder: 2.3.2
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS and terminal
+      placeholder: macOS 15.3, kitty 0.40
+    validations:
+      required: true
+
+  - type: input
+    id: size
+    attributes:
+      label: Terminal size
+      description: Columns × rows, and whether a sidebar or session tabs were open
+      placeholder: 220x50, no sidebar
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: debug
+    attributes:
+      label: Debug snapshot (optional)
+      description: |
+        Set `debugFile` in the plugin options (or `MESSAGE_RAIL_RAILDBG=/tmp/rail.json`),
+        reproduce, then paste the JSON. **It contains message ids and the turn list** —
+        redact anything you do not want public.
+      render: json
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I am on OpenCode ≥ 2.3.2
+          required: true
+        - label: I restarted the TUI after installing or upgrading
+          required: true
