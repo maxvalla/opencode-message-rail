@@ -12,8 +12,12 @@ Requires OpenCode **≥ 2.3.2** (TUI plugin API 2.3.2) and OpenTUI **≥ 0.8.4**
 ## Install
 
 ```bash
-opencode plugin add opencode-message-rail
+opencode plugin opencode-message-rail -g    # global config (~/.config/opencode)
+opencode plugin opencode-message-rail       # this project only
 ```
+
+`-g` writes the global OpenCode config, which is what most people want. Without it the plugin
+is enabled for the current directory only.
 
 Or add it by hand to `~/.config/opencode/opencode.json`:
 
@@ -23,11 +27,10 @@ Or add it by hand to `~/.config/opencode/opencode.json`:
 }
 ```
 
-Other supported specs: `opencode plugin add github:maxvalla/opencode-message-rail`
-(source install — `prepare` builds `dist/` for you), or a local checkout while developing:
-`"file:/abs/path/to/opencode-message-rail"`. A bare absolute directory does **not** load the
-TUI half, and `opencode plugin add` accepts npm/Git specs only — use the `file:` form for a
-local directory.
+Other specs the same command accepts: `opencode plugin github:maxvalla/opencode-message-rail`
+(source install — `prepare` builds `dist/` for you), or `"file:/abs/path/to/opencode-message-rail"`
+while developing from a checkout. A bare absolute directory does **not** load the TUI half —
+use the `file:` form.
 
 Restart the TUI after installing.
 
@@ -107,6 +110,11 @@ so clicks are routed from the raw stdin sequence. Everything works; it is the fa
 
 **Hover card opens in the wrong place.** Please open an issue with the debug snapshot — the
 card anchors to the rail row the tick was painted on, so a mismatch means the layout changed.
+
+**`opencode plugin github:…` fails with `git dep preparation failed`.** npm refused to run the
+package's `prepare` script (npm 11 gates install scripts). Approve it
+(`npm approve-scripts opencode-message-rail`) and retry, or install from the registry once the
+package is published — published tarballs carry `dist/` and run no build step.
 
 **`Alt+R` clashes with another plugin.** Set `enabled: false` in the options instead of
 toggling, or rebind via the command palette command ids `message-rail.toggle`,

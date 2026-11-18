@@ -11,8 +11,11 @@
 ## 安装
 
 ```bash
-opencode plugin add opencode-message-rail
+opencode plugin opencode-message-rail -g    # 写入全局配置（~/.config/opencode）
+opencode plugin opencode-message-rail       # 仅当前项目
 ```
+
+`-g` 写全局配置，多数人需要的是这个；不带 `-g` 只对当前目录生效。
 
 或者手动写进 `~/.config/opencode/opencode.json`：
 
@@ -22,7 +25,7 @@ opencode plugin add opencode-message-rail
 }
 ```
 
-其它可用形式：`opencode plugin add github:maxvalla/opencode-message-rail`（源码安装，`prepare` 会自动构建 `dist/`）；本地开发时用 `"file:/绝对路径/opencode-message-rail"`。注意**直接写绝对目录不会加载 TUI 部分**，而 `opencode plugin add` 只接受 npm / Git 规格，本地目录请用 `file:` 形式。
+同一条命令还接受：`opencode plugin github:maxvalla/opencode-message-rail`（源码安装，`prepare` 会自动构建 `dist/`）；本地开发时用 `"file:/绝对路径/opencode-message-rail"`。注意**直接写绝对目录不会加载 TUI 部分**，本地目录请用 `file:` 形式。
 
 安装后重启 TUI。
 
@@ -87,6 +90,8 @@ opencode plugin add opencode-message-rail
 **`pointerSource` 是 `"sgr"`。** 说明这个构建仍会在插件之前消费鼠标事件，点击是通过原始 stdin 序列路由的。功能正常，只是走了兜底路径。
 
 **悬停卡片位置不对。** 请带 debug 快照开 issue——卡片锚定在刻度**实际被绘制的那一行**，出现偏差意味着布局变了。
+
+**`opencode plugin github:…` 报 `git dep preparation failed`。** npm 拒绝执行包里的 `prepare` 脚本（npm 11 的安装脚本策略）。先放行（`npm approve-scripts opencode-message-rail`）再重试；或者等发布到 registry 后从 registry 安装——发布出去的 tarball 自带 `dist/`，不跑构建。
 
 **`Alt+R` 与别的插件冲突。** 用 `enabled: false` 关掉，或通过命令面板改键，命令 id 是 `message-rail.toggle`、`message-rail.prev`、`message-rail.next`。
 
