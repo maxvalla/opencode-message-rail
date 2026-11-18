@@ -9,6 +9,7 @@
  */
 import { expect, test } from "bun:test";
 import {
+  anchorTop,
   buildRailRows,
   charW,
   clamp,
@@ -18,6 +19,7 @@ import {
   layoutRows,
   strW,
   takeW,
+  tickRow,
   truncateWrapped,
   type Turn,
 } from "./geom";
@@ -638,5 +640,152 @@ test("truncateWrapped: no emitted line ever exceeds the width (ASCII and CJK)", 
   // width = 1 is only satisfiable for single-column glyphs; assert it for ASCII.
   for (const s of ["abc", "abcdef"]) {
     for (const line of truncateWrapped(s, 1, 3)) expect(strW(line)).toBeLessThanOrEqual(1);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// tickRow / anchorTop — the hover card's anchor (design §E.2)
+//
+// The card used to be placed at `i0 + k` (+1 for the top chevron), which is a
+// rail row ONLY in the windowed case. These pin the anchor to the row the rail
+// actually painted, so a sparse fit/T2 layout cannot detach the card from its
+// tick.
+// ---------------------------------------------------------------------------
+
+test("tickRow: fit-case anchor is the sparse layout row, not the ordinal k", () => {
+  const H = 41;
+  const chev = 2;
+  const n = 5;
+  const layout = layoutRows(n, H, chev, 0, false);
+  const rows = buildRailRows({
+    height: H,
+    chev,
+    layout,
+    activeIdx: 0,
+    hoverIdx: null,
+    jumpedIdx: null,
+    hasUp: true,
+    hasDown: true,
+  });
+
+  for (let k = 0; k < n; k++) {
+    const painted = (chev ? 1 : 0) + layout.slots[k];
+    expect(tickRow(rows, k)).toBe(painted);
+    // Regression guard: the old `i0 + k` derivation pointed at a different row.
+    expect(painted).not.toBe((chev ? 1 : 0) + k);
+  }
+  expect(tickRow(rows, 0)).toBe(16); // off (15) + step*0 + top chevron
+  expect(tickRow(rows, n)).toBeNull(); // no such turn
+});
+
+test("tickRow: T2 even layout anchors to the even row, not the ordinal", () => {
+  const H = 30;
+  const chev = 2;
+  const n = 6;
+  const layout = layoutEven(n, H, chev);
+  const rows = buildRailRows({
+    height: H,
+    chev,
+    layout,
+    activeIdx: -1,
+    hoverIdx: null,
+    jumpedIdx: null,
+    hasUp: false,
+    hasDown: false,
+  });
+
+  for (let i = 0; i < n; i++) expect(tickRow(rows, i)).toBe((chev ? 1 : 0) + layout.slots[i]);
+  expect(tickRow(rows, 1)).not.toBe(2); // slot 5 + chevron, not the ordinal
+});
+
+test("tickRow: windowed layout maps turn -> absolute row and rejects turns outside the window", () => {
+  const H = 20;
+  const chev = 2;
+  const n = 40;
+  const layout = layoutRows(n, H, chev, n - 1, true);
+  const rows = buildRailRows({
+    height: H,
+    chev,
+    layout,
+    activeIdx: n - 1,
+    hoverIdx: null,
+    jumpedIdx: null,
+    hasUp: true,
+    hasDown: false,
+  });
+
+  expect(layout.windowed).toBe(true);
+  expect(tickRow(rows, 0)).toBeNull(); // scrolled out of the window
+  for (let i = layout.i0; i < layout.i1; i++) {
+    expect(tickRow(rows, i)).toBe((chev ? 1 : 0) + (i - layout.i0));
+  }
+});
+
+test("tickRow: the same turn slides with the window — this is what re-anchors an open card", () => {
+  const H = 20;
+  const chev = 2;
+  const n = 60;
+  const forActive = (active: number) => {
+    const layout = layoutRows(n, H, chev, active, false);
+    const rows = buildRailRows({
+      height: H,
+      chev,
+      layout,
+      activeIdx: active,
+      hoverIdx: null,
+      jumpedIdx: null,
+      hasUp: true,
+      hasDown: true,
+    });
+    return { layout, rows };
+  };
+
+  const a = forActive(30);
+  const b = forActive(34);
+  expect(a.layout.windowed && b.layout.windowed).toBe(true);
+  expect(b.layout.i0 - a.layout.i0).toBe(4);
+
+  const ra = tickRow(a.rows, 30);
+  const rb = tickRow(b.rows, 30);
+  expect(ra).not.toBeNull();
+  expect(rb).not.toBeNull();
+  expect(ra! - rb!).toBe(4); // the tick moved, so the card must move with it
+});
+
+test("anchorTop: centres the card on its anchor row and clamps inside the rail", () => {
+  expect(anchorTop(20, 4, 41)).toBe(18);
+  expect(anchorTop(20, 3, 41)).toBe(19);
+  expect(anchorTop(1, 4, 41)).toBe(0); // clamped at the top edge
+  expect(anchorTop(40, 4, 41)).toBe(37); // clamped at the bottom edge
+  expect(anchorTop(0, 5, 3)).toBe(0); // card taller than the rail
+  expect(anchorTop(2, 4, 0)).toBe(0); // rail hidden
+});
+
+test("anchorTop(tickRow(...)): every card brackets its tick and stays inside the rail", () => {
+  const H = 41;
+  const chev = 2;
+  for (const n of [1, 2, 3, 5, 8, 20, 40]) {
+    const layout = layoutRows(n, H, chev, 0, false);
+    const rows = buildRailRows({
+      height: H,
+      chev,
+      layout,
+      activeIdx: 0,
+      hoverIdx: null,
+      jumpedIdx: null,
+      hasUp: true,
+      hasDown: true,
+    });
+    for (let i = 0; i < n; i++) {
+      const row = tickRow(rows, i);
+      if (row === null) continue;
+      for (const h of [2, 3, 4, 5]) {
+        const top = anchorTop(row, h, H);
+        expect(top).toBeGreaterThanOrEqual(0);
+        expect(top).toBeLessThanOrEqual(H - h);
+        expect(top).toBeLessThanOrEqual(row);
+        expect(top + h).toBeGreaterThan(row);
+      }
+    }
   }
 });

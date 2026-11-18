@@ -5,7 +5,6 @@ import { createRoot } from "solid-js";
 import { writeFileSync } from "node:fs";
 import type { MouseEvent } from "@opentui/core";
 import { createRail, type RailController } from "./controller";
-import { hitAt } from "./geom";
 import { toneColor } from "./theme";
 
 export default {
@@ -121,16 +120,23 @@ function startRail(context: Context): () => void {
   const tickNodes: PaintNode[] = [];
   const cardLineNodes: PaintNode[] = [];
   let lastPaintKey = "";
-  let downRow: number | null = null;
-  const rowAt = (y: number) => {
-    const v = rail.view();
-    return hitAt(y - v.railTop, v.rows);
-  };
   const steal = (e: MouseEvent) => {
     e.stopPropagation();
     if (typeof (e as { preventDefault?: () => void }).preventDefault === "function") {
       (e as { preventDefault: () => void }).preventDefault();
     }
+  };
+  /**
+   * Both pointer sources go through `rail.pointer`. `native()` is evidence that
+   * this build hit-tests the out-of-flow overlay (0.8.4+ scene graph), which
+   * retires the controller's raw-SGR fallback once it resolves a real row.
+   */
+  const native = (e: MouseEvent, kind: "move" | "down" | "up") => {
+    steal(e);
+    rail.pointer.native(e.y);
+    if (kind === "move") rail.pointer.move(e.y);
+    else if (kind === "down") rail.pointer.down(e.y);
+    else rail.pointer.up(e.y, e.button);
   };
   const paintRail = (): boolean => {
     if (!railNode) return false;
@@ -230,31 +236,14 @@ function startRail(context: Context): () => void {
           flexDirection="column"
           overflow="visible"
           zIndex={900}
-          onMouseMove={(e: MouseEvent) => {
-            steal(e);
-            rail.hoverRow(rowAt(e.y));
-          }}
-          onMouseOver={(e: MouseEvent) => {
-            steal(e);
-            rail.hoverRow(rowAt(e.y));
-          }}
+          onMouseMove={(e: MouseEvent) => native(e, "move")}
+          onMouseOver={(e: MouseEvent) => native(e, "move")}
           onMouseOut={(e: MouseEvent) => {
             steal(e);
-            rail.dismissCard();
+            rail.pointer.leave();
           }}
-          onMouseDown={(e: MouseEvent) => {
-            steal(e);
-            rail.dismissCard();
-            downRow = rowAt(e.y)?.row ?? null;
-          }}
-          onMouseUp={(e: MouseEvent) => {
-            steal(e);
-            const r = rowAt(e.y);
-            if (e.button === 0 && r && downRow === r.row && r.kind !== "blank") {
-              rail.activate({ kind: r.kind, turnIdx: r.turnIdx });
-            }
-            downRow = null;
-          }}
+          onMouseDown={(e: MouseEvent) => native(e, "down")}
+          onMouseUp={(e: MouseEvent) => native(e, "up")}
           onMouseScroll={(e: MouseEvent) => {
             steal(e);
             rail.wheel(e);

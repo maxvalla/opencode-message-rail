@@ -15,7 +15,13 @@ export interface TextScroller {
   readonly verticalScrollBar: unknown;
   scrollTo(position: number | { x: number; y: number }): void;
   scrollBy?(delta: number | { x: number; y: number }): void;
-  scrollChildIntoView?(childId: string): void;
+  /** 0.8.4+: scrolls a descendant into view with an alignment, then re-applies after layout. */
+  scrollChildIntoView?(
+    child: string,
+    options?: { align?: "nearest" | "start" | "end"; inset?: number },
+  ): void;
+  /** 0.8.4+: runs once in the next frame, after layout and before paint. */
+  afterLayout?(callback: () => void): void;
   readonly height: number;
   readonly width: number;
   readonly parent: Renderable | null;

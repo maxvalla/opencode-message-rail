@@ -234,6 +234,22 @@ export function hitAt(dy: number, rows: RailRow[]): RailRow | null {
   return !r || r.kind === "blank" ? null : r;
 }
 
+/**
+ * Rail row of the rendered tick for `turnIdx`, or null when that turn is not in
+ * the current window. Render, hit-test and the hover card all read the same
+ * `RailRow[]`, so the card can anchor only to a row the rail actually painted —
+ * the fit/T2 layouts are sparse, and `i0 + k` is NOT a row.
+ */
+export function tickRow(rows: RailRow[], turnIdx: number): number | null {
+  for (const r of rows) if (r.kind === "tick" && r.turnIdx === turnIdx) return r.row;
+  return null;
+}
+
+/** Vertically centre a card of height `h` on `row`, clamped inside the rail. */
+export function anchorTop(row: number, h: number, height: number): number {
+  return clamp(row - Math.floor(h / 2), 0, Math.max(0, height - h));
+}
+
 export function charW(c: string): number {
   return (c.codePointAt(0) ?? 0) > 0xff ? 2 : 1;
 }

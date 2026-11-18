@@ -14,12 +14,14 @@ import type { Context, Route } from "@opencode/plugin/tui/context";
 import type { MouseEvent, Renderable } from "@opentui/core";
 import { attachedCheck, findTranscript, measure, type Measure, type TextScroller } from "./probe";
 import {
+  anchorTop,
   buildRailRows,
   clamp,
   computeNav,
   hitAt,
   layoutEven,
   layoutRows,
+  tickRow,
   truncateWrapped,
   type Nav,
   type RailRow,
@@ -104,6 +106,19 @@ export interface RailController {
   dismissCard: () => void;
   activate: (a: { kind: "up" | "down" | "tick"; turnIdx: number }) => void;
   wheel: (e: MouseEvent) => void;
+  /**
+   * The single pointer sink. Native JSX handlers call these with absolute
+   * screen rows; `native()` additionally reports that the JSX path works, which
+   * retires the SGR fallback.
+   */
+  pointer: {
+    move: (y: number) => void;
+    down: (y: number) => void;
+    up: (y: number, button?: number) => void;
+    leave: () => void;
+    scroll: (direction: "up" | "down", delta?: number) => void;
+    native: (y: number) => void;
+  };
   jumpTo: (t: Turn) => void;
   debug: () => Record<string, unknown>;
   dispose: () => void;
@@ -146,7 +161,10 @@ export function createRail(
     { equals: geomEq },
   );
   const [hover, setHover] = createSignal<number | null>(null);
-  const [card, setCard] = createSignal<Card | null>(null);
+  // Which turn's card is open — NOT the card itself. The card's geometry is
+  // derived inside `view` from the tick row that was actually painted, so it
+  // re-anchors whenever the layout or the window moves (§E.2).
+  const [cardIdx, setCardIdx] = createSignal<number | null>(null);
   const [jumped, setJumped] = createSignal<number | null>(null);
 
   // ---- probe cache --------------------------------------------------------
@@ -285,28 +303,42 @@ export function createRail(
 
   // ---- dwell + hover card (§E.1–§E.3) -------------------------------------
   let dwellTimer: ReturnType<typeof setTimeout> | undefined;
-  let cardOpen = false;
   let pendingFire: (() => void) | null = null;
 
   function dismissCard() {
     clearTimeout(dwellTimer);
     pendingFire = null;
-    cardOpen = false;
-    setCard(null);
+    setCardIdx(null);
     setHover(null);
   }
 
-  function buildCard(v: View, idx: number): Card {
-    const t = v.turns[idx];
-    const avail = Math.max(CARD_MIN_W, v.railLeft - 2); // the transcript's own width is the budget
+  /**
+   * Card for the open hover turn, anchored to the row the rail actually painted
+   * for it. Returns null when that turn is not currently rendered — outside the
+   * sliding window, culled by a collision, or the rail is hidden — which is also
+   * the signal the caller uses to close the card.
+   */
+  function buildCard(input: {
+    turns: Turn[];
+    rows: RailRow[];
+    idx: number;
+    i0: number;
+    i1: number;
+    railLeft: number;
+    height: number;
+  }): Card | null {
+    const { turns, rows, idx, i0, i1, railLeft, height } = input;
+    if (idx < i0 || idx >= i1) return null; // the turn left the window
+    const t = turns[idx];
+    if (!t) return null;
+    const rel = tickRow(rows, idx);
+    if (rel === null) return null; // not painted → nothing to follow
+    const avail = Math.max(CARD_MIN_W, railLeft - 2); // the transcript's own width is the budget
     const w = Math.min(CARD_MAX_W, avail);
     const textW = Math.max(8, w - 2); // 1 column padding each side, borderless
     const lines = truncateWrapped(t.text || "(empty)", textW, CARD_LINES);
     const h = 1 + lines.length; // 1 header line
-    const k = idx - v.i0;
-    const rel = v.chev ? k + 1 : k; // rail-row of the tick (+1 for the top chevron)
-    // Rail-relative: the card is rendered inside the rail box, clamped to its bounds.
-    const top = clamp(rel - Math.floor(h / 2), 0, Math.max(0, v.height - h));
+    const top = anchorTop(rel, h, height);
     const d = new Date(t.created);
     const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(d.getMinutes()).padStart(2, "0");
@@ -333,13 +365,11 @@ export function createRail(
     const fire = () => {
       if (pendingFire !== fire) return; // superseded by a later hover
       if (Date.now() < lockedUntil) return;
-      const v = view();
-      if (!v.turns[idx]) return;
-      cardOpen = true;
-      setCard(buildCard(v, idx));
+      if (!turns()[idx]) return;
+      setCardIdx(idx);
     };
     pendingFire = fire;
-    if (cardOpen) {
+    if (cardIdx() !== null) {
       fire(); // already open → swap instantly, no re-dwell
       return;
     }
@@ -401,10 +431,10 @@ export function createRail(
 
   async function expandAndScroll(s: TextScroller, id: string, alive: () => boolean): Promise<boolean> {
     dispatch("session.messages_last_user");
-    await frames(2);
+    await awaitLayout(s);
     if (!alive()) return false;
     if (!(await waitFor(id, alive))) return false;
-    await frames(2);
+    await awaitLayout(s);
     return scrollToTurn(s, id, alive);
   }
 
@@ -506,29 +536,44 @@ export function createRail(
     warnOnce(t.id, "Couldn't reach that message");
   }
 
+  /**
+   * Land `id` at the viewport's top edge.
+   *
+   * Preferred rung: the host's own `scrollChildIntoView(id, { align: "start" })`
+   * (0.8.4+), which also re-applies after the next frame's layout, then one
+   * `afterLayout` wait. Fallback: the verified content-offset arithmetic from
+   * 2.0.19 (`scrollTop + child.y - viewport.y`).
+   */
   async function scrollToTurn(s: TextScroller, id: string, alive: () => boolean): Promise<boolean> {
-    for (let attempt = 0; attempt <= 2; attempt++) {
+    for (let attempt = 0; attempt <= 1; attempt++) {
       if (!alive() || !attachedCheck(root, s)) return false;
+      (s as { stickyScroll?: boolean }).stickyScroll = false;
+
       const m = measure(s, new Set([id]));
       const it = m.items.find((x) => x.id === id);
-      if (!it) {
-        if (typeof s.scrollChildIntoView === "function") {
-          try {
-            (s as { stickyScroll?: boolean }).stickyScroll = false;
-            s.scrollChildIntoView(id);
-            await frames(2);
-            if (!alive()) return false;
-            if (nodePresent(id)) return true;
-          } catch {
-            /* fall through to escalate */
-          }
+      const intoView = (
+        s as unknown as {
+          scrollChildIntoView?: (
+            child: string,
+            options?: { align?: "nearest" | "start" | "end"; inset?: number },
+          ) => void;
         }
-        return false; // culled — caller escalates
+      ).scrollChildIntoView;
+      if (typeof intoView === "function") {
+        try {
+          intoView.call(s, id, { align: "start" });
+          await awaitLayout(s);
+          if (!alive()) return false;
+          if (nodePresent(id)) return true;
+        } catch {
+          /* fall through to the offset path */
+        }
       }
+      if (!it) return false; // culled, and the host could not expand it — caller escalates
+
       const target = clamp(it.top, 0, m.maxScroll);
-      (s as { stickyScroll?: boolean }).stickyScroll = false;
       s.scrollTo(target);
-      await frames(2);
+      await awaitLayout(s);
       if (!alive()) return false;
       const after = measure(s, new Set([id]));
       const now = after.items.find((x) => x.id === id);
@@ -597,15 +642,23 @@ export function createRail(
     if (!s || !m || raw === 1) {
       setSample(null);
       setGeom((g) => (g.height === 0 ? g : { ...g, height: 0 }));
+      if (cardIdx() !== null) dismissCard();
       return;
     }
 
-    if (sample()?.scrollTop !== m.scrollTop) dismissCard(); // transcript moved → hover card is stale
+    // The transcript moving does NOT close the card any more: the card is
+    // re-anchored to its tick's painted row inside `view`. It closes only when
+    // that turn leaves the window — decided below against the new geometry.
     setSample(m);
     setGeom((g) => {
       const next = geomFrom(s);
       return geomEq(g, next) ? g : next;
     });
+    const open = cardIdx();
+    if (open !== null) {
+      const v = view();
+      if (open < v.i0 || open >= v.i1 || !v.turns[open] || v.card === null) dismissCard();
+    }
     if (m.atBottom) {
       try {
         (s as { stickyScroll?: boolean }).stickyScroll = true;
@@ -643,6 +696,22 @@ export function createRail(
       hasDown: nav.downIndex !== null,
     });
 
+    // Derived, never stored: the open card re-anchors to whatever row its tick
+    // occupies right now, so a scroll or a window slide moves the card with it.
+    const open = cardIdx();
+    const card =
+      open === null
+        ? null
+        : buildCard({
+            turns: list,
+            rows,
+            idx: open,
+            i0: layout.i0,
+            i1: layout.i1,
+            railLeft: g.railLeft,
+            height: g.height,
+          });
+
     return {
       tier: t,
       turns: list,
@@ -656,7 +725,7 @@ export function createRail(
       i0: layout.i0,
       i1: layout.i1,
       nav,
-      card: card(),
+      card,
     };
   });
 
@@ -721,7 +790,26 @@ export function createRail(
     }
   }
 
-  function wheelBy(dir: "up" | "down", delta = 1) {
+  /**
+   * One wheel notch can reach BOTH sources (native `onMouseScroll` on the rail
+   * box and the SGR parser) until the native path latches. Coalesce only that
+   * cross-source duplicate: same-source notches are never dropped, so a fast
+   * spin keeps its steps.
+   */
+  let lastWheel: { dir: "up" | "down"; source: "native" | "sgr"; at: number } | null = null;
+  const WHEEL_DEDUPE_MS = 30;
+
+  function wheelBy(dir: "up" | "down", delta = 1, source: "native" | "sgr" = "native") {
+    const now = Date.now();
+    if (
+      lastWheel &&
+      lastWheel.source !== source &&
+      lastWheel.dir === dir &&
+      now - lastWheel.at < WHEEL_DEDUPE_MS
+    ) {
+      return;
+    }
+    lastWheel = { dir, source, at: now };
     const n = clamp(Math.round(delta * settings.wheelLines), 1, 5);
     const s = ensureSb();
     if (s) {
@@ -739,27 +827,78 @@ export function createRail(
     for (let i = 0; i < n; i++) dispatch(dir === "up" ? "session.line.up" : "session.line.down");
   }
 
-  // Pointer path. On 2.0.19 `processSingleMouseEvent` always consumes the
-  // mouse stdin event, so `prependInputHandler` never sees SGR. Listen on
-  // `renderer.stdin` in parallel (do not swallow) and hit-test against view
-  // geometry — the 0×0 composer.top overlay is out of Yoga flow.
+  // ---- pointer (§E.5) -----------------------------------------------------
+  // Two sources feed ONE sink: native JSX handlers on the overlay box (0.8.4+
+  // hit-tests the scene graph, so an out-of-flow absolute box can be hit), and
+  // the raw SGR parser on `renderer.stdin` — still required while the host's
+  // `processSingleMouseEvent` consumes mouse input before plugins see it.
+  // Whichever proves live first wins: the first native event that resolves to a
+  // real rail row latches the native path and retires the stdin parser.
   const SGR = /\x1b\[<(\d+);(\d+);(\d+)([Mm])/g;
   let downRow: number | null = null;
   let lastPtr = { x: -1, y: -1 };
   let stdinAcc = "";
-  const handleSgr = (code: number, x: number, y: number, press: string) => {
-    const isMotion = (code & 32) !== 0;
-    const isWheel = (code & 64) !== 0;
-    lastPtr = { x, y };
+  let pointerSource: "native" | "sgr" | null = null;
 
+  /** The rail's paint band — geometry only; blank rows still belong to the rail. */
+  function railBand(x: number, y: number): boolean {
     const v = view();
-    const onRail =
+    return (
       v.tier >= 2 &&
       v.height > 0 &&
       x >= v.railLeft &&
       x < v.railLeft + v.gutter &&
       y >= v.railTop &&
-      y < v.railTop + v.height;
+      y < v.railTop + v.height
+    );
+  }
+
+  /** Rail row under an absolute screen row, or null when it is not a hit target. */
+  function rowAtY(y: number): RailRow | null {
+    const v = view();
+    if (v.tier < 2 || v.height <= 0 || y < v.railTop || y >= v.railTop + v.height) return null;
+    return hitAt(y - v.railTop, v.rows);
+  }
+
+  function pointerMove(y: number): void {
+    hoverRow(rowAtY(y));
+  }
+
+  function pointerDown(y: number): void {
+    dismissCard();
+    downRow = rowAtY(y)?.row ?? null;
+  }
+
+  function pointerUp(y: number, button = 0): void {
+    const r = rowAtY(y);
+    const pressed = downRow !== null && r !== null && downRow === r.row;
+    downRow = null; // clears for BOTH sources, so a duplicated event cannot fire twice
+    if (button !== 0 || !pressed || !r || r.kind === "blank") return;
+    activate({ kind: r.kind, turnIdx: r.turnIdx });
+  }
+
+  function pointerLeave(): void {
+    downRow = null;
+    dismissCard();
+  }
+
+  /** Evidence that the native (JSX) pointer path works on this host build. */
+  function pointerNative(y: number): void {
+    if (pointerSource === "native") return;
+    const r = rowAtY(y);
+    if (!r || r.kind === "blank") return; // wrong coords ⇒ do not retire the SGR path
+    pointerSource = "native";
+    guard(() => stdin?.off?.("data", onStdin), undefined);
+  }
+
+  const handleSgr = (code: number, x: number, y: number, press: string) => {
+    const isMotion = (code & 32) !== 0;
+    const isWheel = (code & 64) !== 0;
+    lastPtr = { x, y };
+    if (pointerSource === null) pointerSource = "sgr";
+
+    const onRail = railBand(x, y);
+    const v = view();
     const c = v.card;
     const onCard = Boolean(
       c &&
@@ -773,24 +912,20 @@ export function createRail(
       if (isWheel && press === "M") {
         const button = code & 3;
         const dir = button === 0 ? "up" : button === 1 ? "down" : null;
-        if (dir === "up" || dir === "down") wheelBy(dir);
-        dismissCard();
+        // No dismiss: an open card follows its own tick through the scroll and
+        // closes only when that turn leaves the window (see `tick`).
+        if (dir === "up" || dir === "down") wheelBy(dir, 1, "sgr");
         return;
       }
       if (isMotion) {
-        hoverRow(hitAt(y - v.railTop, v.rows));
+        pointerMove(y);
         return;
       }
       if (press === "M") {
-        dismissCard();
-        downRow = hitAt(y - v.railTop, v.rows)?.row ?? null;
+        pointerDown(y);
         return;
       }
-      const r = hitAt(y - v.railTop, v.rows);
-      if ((code & 3) === 0 && r && downRow === r.row && r.kind !== "blank") {
-        activate({ kind: r.kind, turnIdx: r.turnIdx });
-      }
-      downRow = null;
+      pointerUp(y, code & 3);
       return;
     }
 
@@ -799,13 +934,9 @@ export function createRail(
       return;
     }
 
-    if (isMotion) {
-      // Leaving the rail cancels a pending dwell and an open card (§E.1
-      // onMouseOut). Chevrons still keep an already-open card via hoverRow.
-      dismissCard();
-      return;
-    }
-    dismissCard();
+    // Leaving the rail cancels a pending dwell and an open card (§E.1
+    // onMouseOut). Chevrons still keep an already-open card via hoverRow.
+    pointerLeave();
   };
   const onStdin = (chunk: Buffer | string) => {
     try {
@@ -841,7 +972,16 @@ export function createRail(
     wheel(e) {
       const dir = e?.scroll?.direction;
       if (dir !== "up" && dir !== "down") return;
-      wheelBy(dir, Number(e?.scroll?.delta) || 1);
+      wheelBy(dir, Number(e?.scroll?.delta) || 1, "native");
+    },
+
+    pointer: {
+      move: pointerMove,
+      down: pointerDown,
+      up: pointerUp,
+      leave: pointerLeave,
+      scroll: (direction, delta) => wheelBy(direction, delta),
+      native: pointerNative,
     },
 
     debug() {
@@ -873,8 +1013,10 @@ export function createRail(
         // "jumped turn sits at the viewport top" check reads this.
         viewItems: m ? m.items.map((i) => ({ id: i.id, top: i.top - m.scrollTop })) : [],
         hoverIdx: hover(),
+        cardIdx: cardIdx(),
         card: v.card ? { top: v.card.top, h: v.card.h, w: v.card.w, header: v.card.header } : null,
         pointer: lastPtr,
+        pointerSource,
         downRow,
         jumping: active?.token ?? 0,
         jumpRung: lastJumpRung,
@@ -900,6 +1042,37 @@ export function createRail(
 
 export function sleep(ms: number): Promise<void> {
   return new Promise<void>((r) => setTimeout(r, ms));
+}
+
+/** Upper bound on `awaitLayout` — `afterLayout` defers while the box is hidden. */
+const LAYOUT_WAIT_MS = 48;
+
+/**
+ * Wait for the scrollbox's next LAYOUT (native `ScrollBox.afterLayout`, 0.8.4+)
+ * instead of guessing a frame count: the callback runs after layout and before
+ * paint, so a position read in it is current. Builds without `afterLayout` fall
+ * back to two frames; a hidden box cannot stall the jump past the bound.
+ */
+function awaitLayout(s: TextScroller): Promise<void> {
+  return new Promise<void>((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    try {
+      const fn = (s as { afterLayout?: (cb: () => void) => void }).afterLayout;
+      if (typeof fn === "function") {
+        fn.call(s, finish);
+        setTimeout(finish, LAYOUT_WAIT_MS);
+        return;
+      }
+    } catch {
+      /* fall through to frames */
+    }
+    void frames(2).then(finish);
+  });
 }
 
 /** `n` frames via rAF, falling back to timers where rAF is absent. */
