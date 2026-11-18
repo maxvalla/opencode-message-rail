@@ -11,28 +11,34 @@ Requires OpenCode **≥ 2.3.2** (TUI plugin API 2.3.2) and OpenTUI **≥ 0.8.4**
 
 ## Install
 
+The package is not on npm yet, so install from source:
+
+```bash
+git clone https://github.com/maxvalla/opencode-message-rail.git
+cd opencode-message-rail
+npm install                                   # installs deps and builds dist/
+```
+
+Then add the checkout to `~/.config/opencode/opencode.json` and restart the TUI:
+
+```json
+{
+  "plugins": ["file:/abs/path/to/opencode-message-rail"]
+}
+```
+
+Use the `file:` form for a directory — a bare path does not load the TUI half, and the
+`npm install` step is required: the repository ships sources, and `prepare` builds `dist/`.
+
+Once the package is published to npm this becomes:
+
 ```bash
 opencode plugin opencode-message-rail -g    # global config (~/.config/opencode)
 opencode plugin opencode-message-rail       # this project only
 ```
 
-`-g` writes the global OpenCode config, which is what most people want. Without it the plugin
-is enabled for the current directory only.
-
-Or add it by hand to `~/.config/opencode/opencode.json`:
-
-```json
-{
-  "plugins": ["opencode-message-rail"]
-}
-```
-
-Other specs the same command accepts: `opencode plugin github:maxvalla/opencode-message-rail`
-(source install — `prepare` builds `dist/` for you), or `"file:/abs/path/to/opencode-message-rail"`
-while developing from a checkout. A bare absolute directory does **not** load the TUI half —
-use the `file:` form.
-
-Restart the TUI after installing.
+`opencode plugin github:maxvalla/opencode-message-rail` does **not** work on OpenCode 2.3.2:
+the installer blocks the package's `prepare` script, so no `dist/` is produced.
 
 ## Keys
 
@@ -111,10 +117,9 @@ so clicks are routed from the raw stdin sequence. Everything works; it is the fa
 **Hover card opens in the wrong place.** Please open an issue with the debug snapshot — the
 card anchors to the rail row the tick was painted on, so a mismatch means the layout changed.
 
-**`opencode plugin github:…` fails with `git dep preparation failed`.** npm refused to run the
-package's `prepare` script (npm 11 gates install scripts). Approve it
-(`npm approve-scripts opencode-message-rail`) and retry, or install from the registry once the
-package is published — published tarballs carry `dist/` and run no build step.
+**`opencode plugin github:…` fails with `git dep preparation failed`.** Expected on 2.3.2 —
+the installer blocks the package's `prepare`, so `dist/` is never built. Install from source
+as described above.
 
 **`Alt+R` clashes with another plugin.** Set `enabled: false` in the options instead of
 toggling, or rebind via the command palette command ids `message-rail.toggle`,

@@ -10,24 +10,32 @@
 
 ## 安装
 
+包还没发布到 npm，目前从源码安装：
+
+```bash
+git clone https://github.com/maxvalla/opencode-message-rail.git
+cd opencode-message-rail
+npm install                                   # 安装依赖并构建 dist/
+```
+
+然后把检出目录写进 `~/.config/opencode/opencode.json`，重启 TUI：
+
+```json
+{
+  "plugins": ["file:/绝对路径/opencode-message-rail"]
+}
+```
+
+目录**必须用 `file:` 形式**——直接写裸路径不会加载 TUI 部分；`npm install` 这一步也不能省：仓库里是源码，`dist/` 由 `prepare` 构建。
+
+等包发布到 npm 之后，安装会简化成：
+
 ```bash
 opencode plugin opencode-message-rail -g    # 写入全局配置（~/.config/opencode）
 opencode plugin opencode-message-rail       # 仅当前项目
 ```
 
-`-g` 写全局配置，多数人需要的是这个；不带 `-g` 只对当前目录生效。
-
-或者手动写进 `~/.config/opencode/opencode.json`：
-
-```json
-{
-  "plugins": ["opencode-message-rail"]
-}
-```
-
-同一条命令还接受：`opencode plugin github:maxvalla/opencode-message-rail`（源码安装，`prepare` 会自动构建 `dist/`）；本地开发时用 `"file:/绝对路径/opencode-message-rail"`。注意**直接写绝对目录不会加载 TUI 部分**，本地目录请用 `file:` 形式。
-
-安装后重启 TUI。
+`opencode plugin github:maxvalla/opencode-message-rail` 在 OpenCode 2.3.2 上**不可用**：安装器会拦截包里的 `prepare` 脚本，导致没有 `dist/`。
 
 ## 按键
 
@@ -91,7 +99,7 @@ opencode plugin opencode-message-rail       # 仅当前项目
 
 **悬停卡片位置不对。** 请带 debug 快照开 issue——卡片锚定在刻度**实际被绘制的那一行**，出现偏差意味着布局变了。
 
-**`opencode plugin github:…` 报 `git dep preparation failed`。** npm 拒绝执行包里的 `prepare` 脚本（npm 11 的安装脚本策略）。先放行（`npm approve-scripts opencode-message-rail`）再重试；或者等发布到 registry 后从 registry 安装——发布出去的 tarball 自带 `dist/`，不跑构建。
+**`opencode plugin github:…` 报 `git dep preparation failed`。** 在 2.3.2 上是预期行为：安装器拦截了 `prepare`，不会生成 `dist/`。请按上面的「从源码安装」操作。
 
 **`Alt+R` 与别的插件冲突。** 用 `enabled: false` 关掉，或通过命令面板改键，命令 id 是 `message-rail.toggle`、`message-rail.prev`、`message-rail.next`。
 
