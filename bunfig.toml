@@ -1,3 +1,5 @@
-# 仅供离线测试脚本使用：让 bun 将 solid-js 解析为浏览器端构建
+# Test-only: make bun resolve solid-js to its browser build. Without this the
+# `node` export condition wins, solid loads its SSR build, and `createMemo` never
+# invalidates — see CONTRIBUTING.md.
 [runtime]
 conditions = ["browser", "import"]

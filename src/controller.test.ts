@@ -22,8 +22,8 @@
 import { expect, test } from "bun:test";
 import { createRoot } from "solid-js";
 import type { Context } from "@opencode/plugin/tui/context";
-import { createRail, type RailController, type Settings } from "./controller";
-import { anchorTop, tickRow } from "./geom";
+import { createRail, type RailController, type Settings } from "./controller.js";
+import { anchorTop, tickRow } from "./geom.js";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 

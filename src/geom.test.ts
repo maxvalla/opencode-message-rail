@@ -22,7 +22,7 @@ import {
   tickRow,
   truncateWrapped,
   type Turn,
-} from "./geom";
+} from "./geom.js";
 
 const makeTurns = (n: number): Turn[] =>
   Array.from({ length: n }, (_, i) => ({ id: `t${i}`, created: i, text: `turn ${i}` }));

@@ -4,8 +4,8 @@ import type { JSX } from "@opentui/solid";
 import { createRoot } from "solid-js";
 import { writeFileSync } from "node:fs";
 import type { MouseEvent } from "@opentui/core";
-import { createRail, type RailController } from "./controller";
-import { toneColor } from "./theme";
+import { createRail, type RailController } from "./controller.js";
+import { toneColor } from "./theme.js";
 
 export default {
   id: "opencode-message-rail",

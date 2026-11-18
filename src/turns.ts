@@ -12,7 +12,7 @@
  */
 
 import type { Context } from "@opencode/plugin/tui/context";
-import type { Turn } from "./geom";
+import type { Turn } from "./geom.js";
 
 export interface RawMsg {
   id: string;

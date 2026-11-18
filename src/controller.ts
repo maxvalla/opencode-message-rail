@@ -12,7 +12,7 @@
 import { createMemo, createSignal } from "solid-js";
 import type { Context, Route } from "@opencode/plugin/tui/context";
 import type { MouseEvent, Renderable } from "@opentui/core";
-import { attachedCheck, findTranscript, measure, type Measure, type TextScroller } from "./probe";
+import { attachedCheck, findTranscript, measure, type Measure, type TextScroller } from "./probe.js";
 import {
   anchorTop,
   buildRailRows,
@@ -26,9 +26,9 @@ import {
   type Nav,
   type RailRow,
   type Turn,
-} from "./geom";
-import { fetchAll, hostUsers, isNavigable, mergeTurns, revertPoint, type FetchState } from "./turns";
-import { railColors, type RailColors } from "./theme";
+} from "./geom.js";
+import { fetchAll, hostUsers, isNavigable, mergeTurns, revertPoint, type FetchState } from "./turns.js";
+import { railColors, type RailColors } from "./theme.js";
 
 export type Tier = 0 | 1 | 2 | 3;
 

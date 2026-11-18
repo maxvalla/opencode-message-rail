@@ -1,30 +1,53 @@
 {
   "name": "opencode-message-rail",
   "version": "0.2.0",
-  "description": "OpenCode 2 TUI plugin: a right-edge message anchor rail with per-turn ticks, chevrons, a dwell-hover preview card and click-to-jump.",
+  "description": "OpenCode TUI plugin: a right-edge message rail with per-turn ticks, chevrons, a dwell-hover preview card and click-to-jump.",
   "license": "MIT",
-  "type": "module",
+  "author": "maxvalla",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxvalla/opencode-message-rail.git"
+  },
+  "homepage": "https://github.com/maxvalla/opencode-message-rail#readme",
+  "bugs": {
+    "url": "https://github.com/maxvalla/opencode-message-rail/issues"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "tui",
+    "plugin",
+    "rail",
+    "minimap",
+    "navigation",
+    "scrollbar",
+    "terminal"
+  ],
   "engines": {
     "opencode": ">=2.3.2"
   },
+  "type": "module",
   "exports": {
     ".": "./dist/index.js",
     "./tui": "./dist/tui.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "babel src --out-dir dist --extensions .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "test": "BUN_BE_BUN=1 opencode test --conditions=browser src/geom.test.ts src/controller.test.ts",
-    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+    "test": "bun test --conditions=browser src/geom.test.ts src/controller.test.ts",
+    "prepublishOnly": "npm run typecheck && npm run test",
+    "prepare": "npm run build"
   },
-  "dependencies": {},
-  "peerDependencies": {
-    "@opentui/core": ">=0.8.4",
-    "@opentui/solid": ">=0.8.4",
-    "solid-js": ">=1.9.0"
+  "dependencies": {
+    "@opentui/solid": "^0.8.4",
+    "solid-js": "^1.9.12"
   },
   "devDependencies": {
     "@babel/cli": "^7.29.7",
@@ -32,10 +55,8 @@
     "@babel/preset-typescript": "^7.27.1",
     "@opencode/plugin": "2.3.2",
     "@opentui/core": "0.8.4",
-    "@opentui/solid": "0.8.4",
     "@types/node": "^26.0.1",
     "babel-preset-solid": "1.9.12",
-    "solid-js": "1.9.12",
     "typescript": "^6.0.3"
   }
 }
